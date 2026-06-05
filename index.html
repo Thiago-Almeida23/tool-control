@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Ferramentas & Certificados</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- SheetJS para exportação Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>🔧 Gestão de Ferramentas</h1>
+    <div id="alert-container"></div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="lista">Lista de Ferramentas</button>
+    <div class="nav-actions">
+      <button id="btn-export" class="btn secondary">📥 Exportar Excel</button>
+      <button id="btn-add" class="btn primary">+ Nova Ferramenta</button>
+    </div>
+  </nav>
+
+  <main>
+    <section id="lista" class="tab-content active">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Ferramenta</th>
+              <th>Especificação</th>
+              <th>Ref. NF</th>
+              <th>Validade</th>
+              <th>Caminho do Certificado</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tools-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Cadastro/Edição -->
+  <div id="tool-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" data-close="tool-modal">&times;</span>
+      <h2 id="modal-title">Nova Ferramenta</h2>
+      <form id="tool-form">
+        <input type="hidden" id="tool-id">
+        <label>Código <input type="text" id="tool-code" placeholder="Ex: FER-001" required></label>
+        <label>Nome da Ferramenta <input type="text" id="tool-name" required></label>
+        <label>Especificação <input type="text" id="tool-spec" placeholder="Ex: Chave Torque 150Nm"></label>
+        <label>Referência NF <input type="text" id="tool-nf" placeholder="Nº da Nota Fiscal"></label>
+        <label>Validade do Certificado <input type="date" id="tool-validity" required></label>
+        <label>Caminho do Certificado (Rede)
+          <input type="text" id="tool-path" placeholder="\\SERVIDOR\Certificados\arquivo.pdf">
+        </label>
+        <button type="submit" class="btn primary">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
