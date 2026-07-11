@@ -3,61 +3,184 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestão de Ferramentas & Certificados</title>
+  <title>Sistema de Gestão Integrada</title>
   <link rel="stylesheet" href="style.css">
-  <!-- SheetJS para exportação Excel -->
+  <!-- Chart.js para Dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS para Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>🔧 Gestão de Ferramentas</h1>
+  <!-- Navegação Superior -->
+  <header id="app-header" style="display:none;">
+    <div class="nav-container">
+      <button id="btn-home" class="btn-nav" title="Voltar ao Menu">🏠 Menu</button>
+      <nav class="tabs">
+        <button class="tab active" data-sec="equipamentos">📦 Equipamentos</button>
+        <button class="tab" data-sec="ferramentas">🔧 Ferramentas</button>
+        <button class="tab" data-sec="izamento">🏗️ Içamento</button>
+      </nav>
+    </div>
     <div id="alert-container"></div>
   </header>
 
-  <nav>
-    <button class="tab active" data-tab="lista">Lista de Ferramentas</button>
-    <div class="nav-actions">
-      <button id="btn-export" class="btn secondary">📥 Exportar Excel</button>
-      <button id="btn-add" class="btn primary">+ Nova Ferramenta</button>
-    </div>
-  </nav>
-
-  <main>
-    <section id="lista" class="tab-content active">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Ferramenta</th>
-              <th>Especificação</th>
-              <th>Ref. NF</th>
-              <th>Validade</th>
-              <th>Caminho do Certificado</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="tools-body"></tbody>
-        </table>
+  <!-- DASHBOARD / MENU PRINCIPAL -->
+  <main id="dashboard">
+    <h1 class="dash-title">📊 Gestão Integrada</h1>
+    <div class="menu-grid">
+      <div class="card" onclick="openSection('equipamentos')">
+        <div class="card-icon">📦</div>
+        <h3>Equipamentos</h3>
+        <p>Calibração, Serial Number e Rastreabilidade</p>
       </div>
-    </section>
+      <div class="card" onclick="openSection('ferramentas')">
+        <div class="card-icon">🔧</div>
+        <h3>Ferramentas</h3>
+        <p>Controle de Validade e Certificados</p>
+      </div>
+      <div class="card" onclick="openSection('izamento')">
+        <div class="card-icon">🏗️</div>
+        <h3>Materiais de Içamento</h3>
+        <p>Status de Certificação e Dimensões</p>
+      </div>
+    </div>
+
+    <!-- Dashboard Gráfico -->
+    <div class="chart-container">
+      <h3>📈 Visão Geral de Status</h3>
+      <canvas id="statusChart"></canvas>
+      <p class="chart-note">*Agrega calibrações, validades e certificações de todas as seções.</p>
+    </div>
   </main>
 
-  <!-- Modal: Cadastro/Edição -->
-  <div id="tool-modal" class="modal">
+  <!-- SEÇÃO: EQUIPAMENTOS -->
+  <section id="sec-equipamentos" class="sec-view" style="display:none;">
+    <div class="sec-header">
+      <h2>📦 Gestão de Equipamentos</h2>
+      <div class="btn-group">
+        <button id="btn-add-eq" class="btn primary">+ Novo</button>
+        <button id="btn-export-eq" class="btn secondary">📥 Excel</button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-col">Descrição</th><th>Fabricante</th><th>Serial Number</th><th>Id Framo</th>
+            <th>Observações</th><th class="cert">Nº Certificado</th><th class="cert">Data Calibração</th>
+            <th class="cert">Próxima Calibração</th><th class="cert">Status</th><th>Link</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-eq"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SEÇÃO: FERRAMENTAS -->
+  <section id="sec-ferramentas" class="sec-view" style="display:none;">
+    <div class="sec-header">
+      <h2>🔧 Gestão de Ferramentas</h2>
+      <div class="btn-group">
+        <button id="btn-add-tool" class="btn primary">+ Nova</button>
+        <button id="btn-export-tool" class="btn secondary">📥 Excel</button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-col">Código</th><th>Ferramenta</th><th>Especificação</th><th>Ref. NF</th>
+            <th>Validade</th><th>Caminho do Certificado</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-tool"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SEÇÃO: MATERIAIS DE IÇAMENTO -->
+  <section id="sec-izamento" class="sec-view" style="display:none;">
+    <div class="sec-header">
+      <h2>🏗️ Gestão de Materiais de Içamento</h2>
+      <div class="btn-group">
+        <button id="btn-add-lift" class="btn primary">+ Novo</button>
+        <button id="btn-export-lift" class="btn secondary">📥 Excel</button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-col">Descrição</th><th>Capacidade</th><th>Dimensão</th><th>Qtd.</th><th>Observações</th>
+            <th>Rastreabilidade</th><th>Serial Number</th><th>Id Framo</th><th>Nota Fiscal</th>
+            <th class="cert">Nº Certificado</th><th class="cert">Data Certificado</th>
+            <th class="cert">Próxima Certificação</th><th class="cert">Status</th><th>Link</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-lift"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- MODAL: EQUIPAMENTOS -->
+  <div id="modal-eq" class="modal">
     <div class="modal-content">
-      <span class="close" data-close="tool-modal">&times;</span>
-      <h2 id="modal-title">Nova Ferramenta</h2>
-      <form id="tool-form">
+      <span class="close" data-modal="modal-eq">&times;</span>
+      <h2 id="title-eq">Novo Equipamento</h2>
+      <form id="form-eq">
+        <input type="hidden" id="eq-id">
+        <label>Descrição <input type="text" id="eq-desc" required></label>
+        <label>Fabricante <input type="text" id="eq-fab"></label>
+        <label>Serial Number <input type="text" id="eq-sn"></label>
+        <label>Id Framo <input type="text" id="eq-framo"></label>
+        <label>Observações <input type="text" id="eq-obs"></label>
+        <label>Nº Certificado <input type="text" id="eq-cert-num"></label>
+        <label>Data Calibração <input type="date" id="eq-date-cal"></label>
+        <label>Próxima Calibração <input type="date" id="eq-date-prox" required></label>
+        <label>Link (Caminho Rede) <input type="text" id="eq-link" placeholder="\\SERVIDOR\Pasta\..."></label>
+        <button type="submit" class="btn primary">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: FERRAMENTAS -->
+  <div id="modal-tool" class="modal">
+    <div class="modal-content">
+      <span class="close" data-modal="modal-tool">&times;</span>
+      <h2 id="title-tool">Nova Ferramenta</h2>
+      <form id="form-tool">
         <input type="hidden" id="tool-id">
-        <label>Código <input type="text" id="tool-code" placeholder="Ex: FER-001" required></label>
-        <label>Nome da Ferramenta <input type="text" id="tool-name" required></label>
-        <label>Especificação <input type="text" id="tool-spec" placeholder="Ex: Chave Torque 150Nm"></label>
-        <label>Referência NF <input type="text" id="tool-nf" placeholder="Nº da Nota Fiscal"></label>
-        <label>Validade do Certificado <input type="date" id="tool-validity" required></label>
-        <label>Caminho do Certificado (Rede)
-          <input type="text" id="tool-path" placeholder="\\SERVIDOR\Certificados\arquivo.pdf">
-        </label>
+        <label>Código <input type="text" id="tool-code" required></label>
+        <label>Nome <input type="text" id="tool-name" required></label>
+        <label>Especificação <input type="text" id="tool-spec"></label>
+        <label>Ref. NF <input type="text" id="tool-nf"></label>
+        <label>Validade Certificado <input type="date" id="tool-validity" required></label>
+        <label>Caminho Certificado <input type="text" id="tool-path" placeholder="\\SERVIDOR\Pasta\..."></label>
+        <button type="submit" class="btn primary">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MATERIAIS DE IÇAMENTO -->
+  <div id="modal-lift" class="modal">
+    <div class="modal-content">
+      <span class="close" data-modal="modal-lift">&times;</span>
+      <h2 id="title-lift">Novo Material de Içamento</h2>
+      <form id="form-lift">
+        <input type="hidden" id="lift-id">
+        <label>Descrição <input type="text" id="lift-desc" required></label>
+        <label>Capacidade <input type="text" id="lift-cap" placeholder="Ex: 5 Ton"></label>
+        <label>Dimensão <input type="text" id="lift-dim" placeholder="Ex: 2m x 50mm"></label>
+        <label>Quantidade <input type="number" id="lift-qty" min="1" value="1"></label>
+        <label>Observações <input type="text" id="lift-obs"></label>
+        <label>Nº Rastreabilidade <input type="text" id="lift-rast"></label>
+        <label>Serial Number <input type="text" id="lift-sn"></label>
+        <label>Id Framo <input type="text" id="lift-framo"></label>
+        <label>Nota Fiscal <input type="text" id="lift-nf"></label>
+        <label>Nº Certificado <input type="text" id="lift-cert-num"></label>
+        <label>Data Certificado <input type="date" id="lift-date-cert"></label>
+        <label>Próxima Certificação <input type="date" id="lift-date-prox" required></label>
+        <label>Link (Caminho Rede) <input type="text" id="lift-link" placeholder="\\SERVIDOR\Pasta\..."></label>
         <button type="submit" class="btn primary">Salvar</button>
       </form>
     </div>
