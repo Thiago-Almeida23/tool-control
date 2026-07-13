@@ -49,30 +49,34 @@ function setupNavigation() {}
 
 // RENDERIZAÇÃO
 function renderSection(sec) {
-  const tbody = document.getElementById(sec === 'equipamentos' ? 'tbody-eq' : sec === 'ferramentas' ? 'tbody-tool' : 'tbody-lift');
+  const tbodyId = sec === 'equipamentos' ? 'tbody-eq' : sec === 'ferramentas' ? 'tbody-tool' : 'tbody-lift';
+  const tbody = document.getElementById(tbodyId);
   tbody.innerHTML = '';
   const data = db[sec];
 
+  // Calcula colspan correto para cada seção
+  let colCount = sec === 'eq' ? 11 : sec === 'tool' ? 7 : 15;
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${sec === 'izamento' ? 15 : 11}" style="text-align:center; padding:2rem; color:#64748b">Nenhum registro cadastrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center; padding:2rem; color:#64748b">Nenhum registro cadastrado.</td></tr>`;
     return;
   }
 
-  // Ordenação por data de vencimento
-  const sortFn = (a,b) => {
-    const da = sec === 'equipamentos' ? a.eq_date_prox : a.lift_date_prox;
-    const db_ = sec === 'equipamentos' ? b.eq_date_prox : b.lift_date_prox;
-    return new Date(da || '2099-01-01') - new Date(db_ || '2099-01-01');
-  };
-  if (sec !== 'ferramentas') data.sort(sortFn);
+  // Ordenação por data de vencimento (ignora vazios)
+  if (sec !== 'ferramentas') {
+    const dateField = sec === 'equipamentos' ? 'eq_date_prox' : 'lift_date_prox';
+    data.sort((a, b) => {
+      const da = new Date(a[dateField] || '2099-01-01');
+      const db_ = new Date(b[dateField] || '2099-01-01');
+      return da - db_;
+    });
+  }
 
   data.forEach(item => {
     let tr = document.createElement('tr');
     
-    // Helper para adicionar title em todas as células (evita compressão visual)
     const addTitleToCells = (row) => {
       row.querySelectorAll('td').forEach(td => {
-        if (td.textContent.trim() !== '-') td.title = td.textContent.trim();
+        if (td.textContent.trim() !== '-' && td.textContent.trim() !== '') td.title = td.textContent.trim();
       });
     };
 
@@ -133,21 +137,27 @@ window.copyPath = (path) => {
   navigator.clipboard.writeText(path).then(() => alert("✅ Caminho copiado! Cole no Explorador de Arquivos.")).catch(() => prompt("Copie manualmente:", path));
 };
 
-function saveDB(sec) {
-  localStorage.setItem(`db_${sec}`, JSON.stringify(db[sec]));
-  renderSection(sec);
-  if (sec === 'izamento') checkAlerts();
+function saveData(sec) {
+  try {
+    localStorage.setItem(`db_${sec}`, JSON.stringify(db[sec]));
+    renderSection(sec);
+    checkAlerts();
+    renderDashboardChart(); // Atualiza o gráfico da home
+  } catch (err) {
+    alert('⚠️ Erro ao salvar: armazenamento local cheio ou bloqueado pelo navegador.');
+    console.error('Erro localStorage:', err);
+  }
 }
 
 function checkAlerts() {
   const container = document.getElementById('alert-container');
   container.innerHTML = '';
-  if (currentSection !== 'izamento' && currentSection !== 'equipamentos') return;
+  if (!currentSection || currentSection === 'ferramentas') return;
   
   const dateField = currentSection === 'equipamentos' ? 'eq_date_prox' : 'lift_date_prox';
   const alerts = db[currentSection].filter(i => {
     const s = getStatus(i[dateField]);
-    return s.class !== 'status-valid' && s.class !== 'status-na';
+    return s.class === 'status-expired' || s.class === 'status-warning';
   });
 
   alerts.forEach(i => {
@@ -162,11 +172,11 @@ function checkAlerts() {
 // DASHBOARD CHART
 function renderDashboardChart() {
   const ctx = document.getElementById('statusChart');
-  if (!ctx || statusChart) { if(statusChart) statusChart.destroy(); return; }
+  if (!ctx) return;
+  if (statusChart) statusChart.destroy();
 
   let counts = { valid: 0, warning: 0, expired: 0 };
   
-  // Agrega todos os itens com data
   db.equipamentos.forEach(i => { const s = getStatus(i.eq_date_prox); if(s.class !== 'status-na') counts[s.class]++; });
   db.ferramentas.forEach(i => { const s = getStatus(i.tool_validity); if(s.class !== 'status-na') counts[s.class]++; });
   db.izamento.forEach(i => { const s = getStatus(i.lift_date_prox); if(s.class !== 'status-na') counts[s.class]++; });
@@ -179,13 +189,14 @@ function renderDashboardChart() {
         data: [counts.valid, counts.warning, counts.expired],
         backgroundColor: ['#dcfce7', '#fef3c7', '#fee2e2'],
         borderColor: ['#16a34a', '#d97706', '#dc2626'],
-        borderWidth: 1
+        borderWidth: 2
       }]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom' },
+        legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
         tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} itens` } }
       }
     }
@@ -194,9 +205,9 @@ function renderDashboardChart() {
 
 // CRUD
 window.deleteItem = (sec, id) => {
-  if (confirm('Excluir este item?')) {
+  if (confirm('Excluir este item permanentemente?')) {
     db[sec] = db[sec].filter(i => i.id !== id);
-    saveDB(sec);
+    saveData(sec);
   }
 };
 
@@ -204,41 +215,60 @@ window.editItem = (sec, id) => {
   const item = db[sec].find(i => i.id === id);
   if (!item) return;
   const modal = document.getElementById(`modal-${sec}`);
-  modal.querySelector('#title-' + sec).textContent = sec === 'eq' ? 'Editar Equipamento' : sec === 'tool' ? 'Editar Ferramenta' : 'Editar Material';
+  modal.querySelector(`#title-${sec}`).textContent = sec === 'eq' ? 'Editar Equipamento' : sec === 'tool' ? 'Editar Ferramenta' : 'Editar Material';
   modal.style.display = 'flex';
-  Object.keys(item).forEach(key => { const inp = document.getElementById(key); if(inp) inp.value = item[key]; });
+  
+  // Preenche campos explicitamente para evitar falhas
+  Object.keys(item).forEach(key => {
+    const input = document.getElementById(key);
+    if (input && input.type !== 'hidden') input.value = item[key];
+  });
 };
 
 // MODAIS & FORMULÁRIOS
 function setupModals() {
   document.querySelectorAll('.close').forEach(btn => btn.addEventListener('click', () => btn.parentElement.parentElement.style.display = 'none'));
   window.addEventListener('click', e => { if (e.target.classList.contains('modal')) e.target.style.display = 'none'; });
+  
   document.getElementById('btn-add-eq').addEventListener('click', () => openModal('eq'));
   document.getElementById('btn-add-tool').addEventListener('click', () => openModal('tool'));
   document.getElementById('btn-add-lift').addEventListener('click', () => openModal('lift'));
 }
 
 function openModal(sec) {
-  document.getElementById(`modal-${sec}`).style.display = 'flex';
+  const modal = document.getElementById(`modal-${sec}`);
+  modal.style.display = 'flex';
   document.getElementById(`title-${sec}`).textContent = sec === 'eq' ? 'Novo Equipamento' : sec === 'tool' ? 'Nova Ferramenta' : 'Novo Material';
-  document.getElementById(`form-${sec}`).reset();
-  document.getElementById(`${sec === 'eq' ? 'eq' : sec === 'tool' ? 'tool' : 'lift'}-id`).value = '';
+  modal.querySelector(`form`).reset();
+  modal.querySelector(`input[type="hidden"]`).value = '';
 }
 
 function setupForms() {
   ['eq', 'tool', 'lift'].forEach(sec => {
-    document.getElementById(`form-${sec}`).addEventListener('submit', e => {
+    const form = document.getElementById(`form-${sec}`);
+    form.addEventListener('submit', e => {
       e.preventDefault();
-      const id = document.getElementById(`${sec === 'eq' ? 'eq' : sec === 'tool' ? 'tool' : 'lift'}-id`).value || Date.now().toString();
-      const formData = {};
-      e.target.querySelectorAll('input').forEach(inp => {
-        if (inp.id !== `${sec === 'eq' ? 'eq' : sec === 'tool' ? 'tool' : 'lift'}-id`) formData[inp.id] = inp.value.trim();
+      
+      const hiddenId = form.querySelector('input[type="hidden"]');
+      const id = hiddenId.value || Date.now().toString();
+      
+      const newItem = { id };
+      form.querySelectorAll('input:not([type="hidden"])').forEach(inp => {
+        if (inp.id) newItem[inp.id] = inp.value.trim();
       });
-      const item = { id, ...formData };
-      const existing = db[sec].find(i => i.id === id);
-      if (existing) Object.assign(existing, item); else db[sec].push(item);
-      saveDB(sec);
-      document.getElementById(`modal-${sec}`).style.display = 'none';
+
+      // Atualiza ou insere
+      const existingIndex = db[sec].findIndex(i => i.id === id);
+      if (existingIndex > -1) {
+        db[sec][existingIndex] = { ...db[sec][existingIndex], ...newItem };
+      } else {
+        db[sec].push(newItem);
+      }
+
+      saveData(sec);
+      modal.style.display = 'none';
+      form.reset();
+      hiddenId.value = '';
     });
   });
 }
