@@ -55,10 +55,8 @@ th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(-
 th { background: #f8fafc; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
 tr:hover td { background: #f8fafc; }
 
-/* Sticky First Column */
 .sticky-col { position: sticky; left: 0; background: inherit; z-index: 2; min-width: 150px; font-weight: 500; }
 thead .sticky-col { background: #f8fafc; }
-
 .cert { background: var(--cert-bg); font-weight: 500; }
 
 .status-badge { padding: 0.25rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; display: inline-block; }

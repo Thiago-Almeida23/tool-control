@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Gestão Integrada</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Chart.js para Dashboard -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- SheetJS para Excel -->
+  <!-- SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <!-- Navegação Superior -->
   <header id="app-header" style="display:none;">
     <div class="nav-container">
       <button id="btn-home" class="btn-nav" title="Voltar ao Menu">🏠 Menu</button>
@@ -24,7 +23,6 @@
     <div id="alert-container"></div>
   </header>
 
-  <!-- DASHBOARD / MENU PRINCIPAL -->
   <main id="dashboard">
     <h1 class="dash-title">📊 Gestão Integrada</h1>
     <div class="menu-grid">
@@ -45,7 +43,6 @@
       </div>
     </div>
 
-    <!-- Dashboard Gráfico -->
     <div class="chart-container">
       <h3>📈 Visão Geral de Status</h3>
       <canvas id="statusChart"></canvas>
@@ -53,7 +50,6 @@
     </div>
   </main>
 
-  <!-- SEÇÃO: EQUIPAMENTOS -->
   <section id="sec-equipamentos" class="sec-view" style="display:none;">
     <div class="sec-header">
       <h2>📦 Gestão de Equipamentos</h2>
@@ -76,7 +72,6 @@
     </div>
   </section>
 
-  <!-- SEÇÃO: FERRAMENTAS -->
   <section id="sec-ferramentas" class="sec-view" style="display:none;">
     <div class="sec-header">
       <h2>🔧 Gestão de Ferramentas</h2>
@@ -98,7 +93,6 @@
     </div>
   </section>
 
-  <!-- SEÇÃO: MATERIAIS DE IÇAMENTO -->
   <section id="sec-izamento" class="sec-view" style="display:none;">
     <div class="sec-header">
       <h2>🏗️ Gestão de Materiais de Içamento</h2>
@@ -122,7 +116,6 @@
     </div>
   </section>
 
-  <!-- MODAL: EQUIPAMENTOS -->
   <div id="modal-eq" class="modal">
     <div class="modal-content">
       <span class="close" data-modal="modal-eq">&times;</span>
@@ -143,7 +136,6 @@
     </div>
   </div>
 
-  <!-- MODAL: FERRAMENTAS -->
   <div id="modal-tool" class="modal">
     <div class="modal-content">
       <span class="close" data-modal="modal-tool">&times;</span>
@@ -161,7 +153,6 @@
     </div>
   </div>
 
-  <!-- MODAL: MATERIAIS DE IÇAMENTO -->
   <div id="modal-lift" class="modal">
     <div class="modal-content">
       <span class="close" data-modal="modal-lift">&times;</span>

@@ -4,6 +4,10 @@ const db = {
   izamento: JSON.parse(localStorage.getItem('db_izamento')) || []
 };
 
+// Mapeamento entre IDs curtos do HTML e chaves completas do DB
+const SEC_MAP = { eq: 'equipamentos', tool: 'ferramentas', lift: 'izamento' };
+const getDbKey = (sec) => SEC_MAP[sec] || sec;
+
 let currentSection = null;
 let statusChart = null;
 
@@ -54,14 +58,12 @@ function renderSection(sec) {
   tbody.innerHTML = '';
   const data = db[sec];
 
-  // Calcula colspan correto para cada seção
-  let colCount = sec === 'eq' ? 11 : sec === 'tool' ? 7 : 15;
-  if (data.length === 0) {
+  let colCount = sec === 'equipamentos' ? 11 : sec === 'ferramentas' ? 7 : 15;
+  if (!data || data.length === 0) {
     tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center; padding:2rem; color:#64748b">Nenhum registro cadastrado.</td></tr>`;
     return;
   }
 
-  // Ordenação por data de vencimento (ignora vazios)
   if (sec !== 'ferramentas') {
     const dateField = sec === 'equipamentos' ? 'eq_date_prox' : 'lift_date_prox';
     data.sort((a, b) => {
@@ -84,7 +86,7 @@ function renderSection(sec) {
       const status = getStatus(item.eq_date_prox);
       const linkBtn = item.eq_link ? `<button class="btn-sm btn-copy" onclick="copyPath('${item.eq_link.replace(/\\/g, '\\\\')}')">📋</button>` : '-';
       tr.innerHTML = `
-        <td class="sticky-col">${item.eq_desc}</td><td>${item.eq_fab||'-'}</td><td>${item.eq_sn||'-'}</td>
+        <td class="sticky-col">${item.eq_desc || '-'}</td><td>${item.eq_fab||'-'}</td><td>${item.eq_sn||'-'}</td>
         <td>${item.eq_framo||'-'}</td><td>${item.eq_obs||'-'}</td>
         <td class="cert">${item.eq_cert_num||'-'}</td><td class="cert">${formatDate(item.eq_date_cal)}</td>
         <td class="cert">${formatDate(item.eq_date_prox)}</td>
@@ -96,7 +98,7 @@ function renderSection(sec) {
     } else if (sec === 'ferramentas') {
       const linkBtn = item.tool_path ? `<button class="btn-sm btn-copy" onclick="copyPath('${item.tool_path.replace(/\\/g, '\\\\')}')">📋</button>` : '-';
       tr.innerHTML = `
-        <td class="sticky-col"><strong>${item.tool_code}</strong></td><td>${item.tool_name}</td><td>${item.tool_spec||'-'}</td>
+        <td class="sticky-col"><strong>${item.tool_code || '-'}</strong></td><td>${item.tool_name || '-'}</td><td>${item.tool_spec||'-'}</td>
         <td>${item.tool_nf||'-'}</td><td>${formatDate(item.tool_validity)}</td><td>${linkBtn}</td>
         <td class="actions"><button class="btn-sm btn-edit" onclick="editItem('tool','${item.id}')">✏️</button> <button class="btn-sm btn-del" onclick="deleteItem('tool','${item.id}')">🗑️</button></td>
       `;
@@ -105,8 +107,8 @@ function renderSection(sec) {
       const status = getStatus(item.lift_date_prox);
       const linkBtn = item.lift_link ? `<button class="btn-sm btn-copy" onclick="copyPath('${item.lift_link.replace(/\\/g, '\\\\')}')">📋</button>` : '-';
       tr.innerHTML = `
-        <td class="sticky-col">${item.lift_desc}</td><td>${item.lift_cap||'-'}</td><td>${item.lift_dim||'-'}</td>
-        <td>${item.lift_qty}</td><td>${item.lift_obs||'-'}</td>
+        <td class="sticky-col">${item.lift_desc || '-'}</td><td>${item.lift_cap||'-'}</td><td>${item.lift_dim||'-'}</td>
+        <td>${item.lift_qty || 0}</td><td>${item.lift_obs||'-'}</td>
         <td>${item.lift_rast||'-'}</td><td>${item.lift_sn||'-'}</td><td>${item.lift_framo||'-'}</td>
         <td>${item.lift_nf||'-'}</td><td class="cert">${item.lift_cert_num||'-'}</td>
         <td class="cert">${formatDate(item.lift_date_cert)}</td><td class="cert">${formatDate(item.lift_date_prox)}</td>
@@ -138,14 +140,16 @@ window.copyPath = (path) => {
 };
 
 function saveData(sec) {
+  const key = getDbKey(sec);
   try {
-    localStorage.setItem(`db_${sec}`, JSON.stringify(db[sec]));
-    renderSection(sec);
+    localStorage.setItem(`db_${key}`, JSON.stringify(db[key]));
+    renderSection(key);
     checkAlerts();
-    renderDashboardChart(); // Atualiza o gráfico da home
+    renderDashboardChart();
+    return true;
   } catch (err) {
-    alert('⚠️ Erro ao salvar: armazenamento local cheio ou bloqueado pelo navegador.');
-    console.error('Erro localStorage:', err);
+    alert('⚠️ Erro ao salvar: ' + (err.name === 'QuotaExceededError' ? 'Armazenamento cheio.' : err.message));
+    return false;
   }
 }
 
@@ -164,7 +168,7 @@ function checkAlerts() {
     const s = getStatus(i[dateField]);
     const div = document.createElement('div');
     div.className = 'alert';
-    div.textContent = `${s.label}: ${i.eq_desc || i.lift_desc} (Próx: ${formatDate(i[dateField])})`;
+    div.textContent = `${s.label}: ${i.eq_desc || i.lift_desc || 'Item'} (Próx: ${formatDate(i[dateField])})`;
     container.appendChild(div);
   });
 }
@@ -205,23 +209,24 @@ function renderDashboardChart() {
 
 // CRUD
 window.deleteItem = (sec, id) => {
+  const key = getDbKey(sec);
   if (confirm('Excluir este item permanentemente?')) {
-    db[sec] = db[sec].filter(i => i.id !== id);
-    saveData(sec);
+    db[key] = db[key].filter(i => i.id !== id);
+    saveData(key);
   }
 };
 
 window.editItem = (sec, id) => {
-  const item = db[sec].find(i => i.id === id);
+  const key = getDbKey(sec);
+  const item = db[key].find(i => i.id === id);
   if (!item) return;
   const modal = document.getElementById(`modal-${sec}`);
   modal.querySelector(`#title-${sec}`).textContent = sec === 'eq' ? 'Editar Equipamento' : sec === 'tool' ? 'Editar Ferramenta' : 'Editar Material';
   modal.style.display = 'flex';
   
-  // Preenche campos explicitamente para evitar falhas
-  Object.keys(item).forEach(key => {
-    const input = document.getElementById(key);
-    if (input && input.type !== 'hidden') input.value = item[key];
+  Object.keys(item).forEach(field => {
+    const input = document.getElementById(field);
+    if (input && input.type !== 'hidden') input.value = item[field];
   });
 };
 
@@ -245,30 +250,42 @@ function openModal(sec) {
 
 function setupForms() {
   ['eq', 'tool', 'lift'].forEach(sec => {
+    const dbKey = getDbKey(sec);
     const form = document.getElementById(`form-${sec}`);
-    form.addEventListener('submit', e => {
+    const modal = document.getElementById(`modal-${sec}`);
+
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
-      
-      const hiddenId = form.querySelector('input[type="hidden"]');
-      const id = hiddenId.value || Date.now().toString();
-      
-      const newItem = { id };
-      form.querySelectorAll('input:not([type="hidden"])').forEach(inp => {
-        if (inp.id) newItem[inp.id] = inp.value.trim();
-      });
+      try {
+        const hiddenId = form.querySelector('input[type="hidden"]');
+        const id = hiddenId.value || Date.now().toString();
+        
+        const newItem = { id };
+        form.querySelectorAll('input:not([type="hidden"])').forEach(inp => {
+          if (inp.id) {
+            const key = inp.id.replace(/-/g, '_');
+            newItem[key] = inp.type === 'number' ? (parseInt(inp.value) || 0) : inp.value.trim();
+          }
+        });
 
-      // Atualiza ou insere
-      const existingIndex = db[sec].findIndex(i => i.id === id);
-      if (existingIndex > -1) {
-        db[sec][existingIndex] = { ...db[sec][existingIndex], ...newItem };
-      } else {
-        db[sec].push(newItem);
+        const existingIndex = db[dbKey].findIndex(i => i.id === id);
+        if (existingIndex > -1) {
+          db[dbKey][existingIndex] = { ...db[dbKey][existingIndex], ...newItem };
+        } else {
+          db[dbKey].push(newItem);
+        }
+
+        if (saveData(dbKey)) {
+          modal.style.display = 'none';
+          form.reset();
+          hiddenId.value = '';
+        }
+      } catch (err) {
+        console.error('[ERRO] Falha no submit:', err);
+        alert('❌ Erro inesperado: ' + err.message);
       }
-
-      saveData(sec);
-      modal.style.display = 'none';
-      form.reset();
-      hiddenId.value = '';
     });
   });
 }
@@ -282,7 +299,8 @@ function setupExport() {
 
 function exportToExcel(sec) {
   if (typeof XLSX === 'undefined') return alert("Biblioteca não carregada.");
-  const data = db[sec];
+  const dbKey = getDbKey(sec);
+  const data = db[dbKey];
   if (!data.length) return alert("Nada para exportar.");
 
   let rows = [];
