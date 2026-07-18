@@ -5,19 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Gestão Integrada</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <header id="app-header" style="display:none;">
+  <header id="app-header">
     <div class="nav-container">
       <button id="btn-home" class="btn-nav" title="Voltar ao Menu">🏠 Menu</button>
       <nav class="tabs">
-        <button class="tab active" data-sec="equipamentos">📦 Equipamentos</button>
-        <button class="tab" data-sec="ferramentas">🔧 Ferramentas</button>
-        <button class="tab" data-sec="izamento">🏗️ Içamento</button>
+        <button class="tab active" data-sec="eq">📦 Equipamentos</button>
+        <button class="tab" data-sec="tool">🔧 Ferramentas</button>
+        <button class="tab" data-sec="lift">🏗️ Içamento</button>
       </nav>
     </div>
     <div id="alert-container"></div>
@@ -26,37 +24,57 @@
   <main id="dashboard">
     <h1 class="dash-title">📊 Gestão Integrada</h1>
     <div class="menu-grid">
-      <div class="card" onclick="openSection('equipamentos')">
+      <div class="card" onclick="openSection('eq')">
         <div class="card-icon">📦</div>
         <h3>Equipamentos</h3>
         <p>Calibração, Serial Number e Rastreabilidade</p>
       </div>
-      <div class="card" onclick="openSection('ferramentas')">
+      <div class="card" onclick="openSection('tool')">
         <div class="card-icon">🔧</div>
         <h3>Ferramentas</h3>
         <p>Controle de Validade e Certificados</p>
       </div>
-      <div class="card" onclick="openSection('izamento')">
+      <div class="card" onclick="openSection('lift')">
         <div class="card-icon">🏗️</div>
         <h3>Materiais de Içamento</h3>
         <p>Status de Certificação e Dimensões</p>
       </div>
     </div>
 
-    <div class="chart-container">
-      <h3>📈 Visão Geral de Status</h3>
-      <canvas id="statusChart"></canvas>
-      <p class="chart-note">*Agrega calibrações, validades e certificações de todas as seções.</p>
+    <div class="charts-grid">
+      <div class="chart-box">
+        <h3>📦 Equipamentos</h3>
+        <canvas id="chart-eq"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>🔧 Ferramentas</h3>
+        <canvas id="chart-tool"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>🏗️ Içamento</h3>
+        <canvas id="chart-lift"></canvas>
+      </div>
     </div>
+    <p class="chart-note">*Gráficos atualizados automaticamente ao cadastrar, editar ou excluir itens.</p>
   </main>
 
-  <section id="sec-equipamentos" class="sec-view" style="display:none;">
+  <section id="sec-eq" class="sec-view">
     <div class="sec-header">
       <h2>📦 Gestão de Equipamentos</h2>
       <div class="btn-group">
         <button id="btn-add-eq" class="btn primary">+ Novo</button>
         <button id="btn-export-eq" class="btn secondary">📥 Excel</button>
       </div>
+    </div>
+    <div class="filters-container">
+      <input type="text" id="search-eq" class="search-input" placeholder="🔍 Buscar por descrição, código, serial...">
+      <select id="status-eq" class="filter-select">
+        <option value="all">Todos os Status</option>
+        <option value="valid">✅ Válido</option>
+        <option value="warning">⚠️ Venc. Próximo</option>
+        <option value="expired">🔴 Vencido</option>
+      </select>
+      <span id="count-eq" class="result-count">Carregando...</span>
     </div>
     <div class="table-wrapper">
       <table>
@@ -72,13 +90,23 @@
     </div>
   </section>
 
-  <section id="sec-ferramentas" class="sec-view" style="display:none;">
+  <section id="sec-tool" class="sec-view">
     <div class="sec-header">
       <h2>🔧 Gestão de Ferramentas</h2>
       <div class="btn-group">
         <button id="btn-add-tool" class="btn primary">+ Nova</button>
         <button id="btn-export-tool" class="btn secondary">📥 Excel</button>
       </div>
+    </div>
+    <div class="filters-container">
+      <input type="text" id="search-tool" class="search-input" placeholder="🔍 Buscar por código, nome, especificação...">
+      <select id="status-tool" class="filter-select">
+        <option value="all">Todos os Status</option>
+        <option value="valid">✅ Válido</option>
+        <option value="warning">⚠️ Venc. Próximo</option>
+        <option value="expired">🔴 Vencido</option>
+      </select>
+      <span id="count-tool" class="result-count">Carregando...</span>
     </div>
     <div class="table-wrapper">
       <table>
@@ -93,13 +121,23 @@
     </div>
   </section>
 
-  <section id="sec-izamento" class="sec-view" style="display:none;">
+  <section id="sec-lift" class="sec-view">
     <div class="sec-header">
       <h2>🏗️ Gestão de Materiais de Içamento</h2>
       <div class="btn-group">
         <button id="btn-add-lift" class="btn primary">+ Novo</button>
         <button id="btn-export-lift" class="btn secondary">📥 Excel</button>
       </div>
+    </div>
+    <div class="filters-container">
+      <input type="text" id="search-lift" class="search-input" placeholder="🔍 Buscar por descrição, NF, serial...">
+      <select id="status-lift" class="filter-select">
+        <option value="all">Todos os Status</option>
+        <option value="valid">✅ Válido</option>
+        <option value="warning">⚠️ Venc. Próximo</option>
+        <option value="expired">🔴 Vencido</option>
+      </select>
+      <span id="count-lift" class="result-count">Carregando...</span>
     </div>
     <div class="table-wrapper">
       <table>
