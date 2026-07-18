@@ -4,7 +4,6 @@ const db = {
   izamento: JSON.parse(localStorage.getItem('db_izamento')) || []
 };
 
-// Mapeamento entre IDs curtos do HTML e chaves completas do DB
 const SEC_MAP = { eq: 'equipamentos', tool: 'ferramentas', lift: 'izamento' };
 const getDbKey = (sec) => SEC_MAP[sec] || sec;
 
@@ -16,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupModals();
   setupForms();
   setupExport();
+  setupCopyButtons(); // Event delegation para copiar caminhos
   renderDashboardChart();
   
   const lastSec = sessionStorage.getItem('last_sec');
@@ -75,7 +75,6 @@ function renderSection(sec) {
 
   data.forEach(item => {
     let tr = document.createElement('tr');
-    
     const addTitleToCells = (row) => {
       row.querySelectorAll('td').forEach(td => {
         if (td.textContent.trim() !== '-' && td.textContent.trim() !== '') td.title = td.textContent.trim();
@@ -84,7 +83,8 @@ function renderSection(sec) {
 
     if (sec === 'equipamentos') {
       const status = getStatus(item.eq_date_prox);
-      const linkBtn = item.eq_link ? `<button class="btn-sm btn-copy" onclick="copyPath('${item.eq_link.replace(/\\/g, '\\\\')}')">📋</button>` : '-';
+      // Usa data-path para evitar quebra de string inline
+      const linkBtn = item.eq_link ? `<button class="btn-sm btn-copy" data-path="${item.eq_link}">📋</button>` : '-';
       tr.innerHTML = `
         <td class="sticky-col">${item.eq_desc || '-'}</td><td>${item.eq_fab||'-'}</td><td>${item.eq_sn||'-'}</td>
         <td>${item.eq_framo||'-'}</td><td>${item.eq_obs||'-'}</td>
@@ -96,7 +96,7 @@ function renderSection(sec) {
       `;
       addTitleToCells(tr);
     } else if (sec === 'ferramentas') {
-      const linkBtn = item.tool_path ? `<button class="btn-sm btn-copy" onclick="copyPath('${item.tool_path.replace(/\\/g, '\\\\')}')">📋</button>` : '-';
+      const linkBtn = item.tool_path ? `<button class="btn-sm btn-copy" data-path="${item.tool_path}">📋</button>` : '-';
       tr.innerHTML = `
         <td class="sticky-col"><strong>${item.tool_code || '-'}</strong></td><td>${item.tool_name || '-'}</td><td>${item.tool_spec||'-'}</td>
         <td>${item.tool_nf||'-'}</td><td>${formatDate(item.tool_validity)}</td><td>${linkBtn}</td>
@@ -105,7 +105,7 @@ function renderSection(sec) {
       addTitleToCells(tr);
     } else if (sec === 'izamento') {
       const status = getStatus(item.lift_date_prox);
-      const linkBtn = item.lift_link ? `<button class="btn-sm btn-copy" onclick="copyPath('${item.lift_link.replace(/\\/g, '\\\\')}')">📋</button>` : '-';
+      const linkBtn = item.lift_link ? `<button class="btn-sm btn-copy" data-path="${item.lift_link}">📋</button>` : '-';
       tr.innerHTML = `
         <td class="sticky-col">${item.lift_desc || '-'}</td><td>${item.lift_cap||'-'}</td><td>${item.lift_dim||'-'}</td>
         <td>${item.lift_qty || 0}</td><td>${item.lift_obs||'-'}</td>
@@ -224,9 +224,16 @@ window.editItem = (sec, id) => {
   modal.querySelector(`#title-${sec}`).textContent = sec === 'eq' ? 'Editar Equipamento' : sec === 'tool' ? 'Editar Ferramenta' : 'Editar Material';
   modal.style.display = 'flex';
   
+  // Preenche ID oculto explicitamente
+  const hiddenId = modal.querySelector('input[type="hidden"]');
+  if (hiddenId) hiddenId.value = item.id;
+
+  // Mapeia chaves do objeto (_) para IDs do HTML (-)
   Object.keys(item).forEach(field => {
-    const input = document.getElementById(field);
-    if (input && input.type !== 'hidden') input.value = item[field];
+    if (field === 'id') return;
+    const htmlId = field.replace(/_/g, '-');
+    const input = document.getElementById(htmlId);
+    if (input) input.value = item[field];
   });
 };
 
@@ -253,7 +260,6 @@ function setupForms() {
     const dbKey = getDbKey(sec);
     const form = document.getElementById(`form-${sec}`);
     const modal = document.getElementById(`modal-${sec}`);
-
     if (!form) return;
 
     form.addEventListener('submit', (e) => {
@@ -287,6 +293,17 @@ function setupForms() {
         alert('❌ Erro inesperado: ' + err.message);
       }
     });
+  });
+}
+
+// Event Delegation para botões de copiar caminho
+function setupCopyButtons() {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-copy');
+    if (btn && btn.dataset.path) {
+      e.preventDefault();
+      window.copyPath(btn.dataset.path);
+    }
   });
 }
 
